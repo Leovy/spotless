@@ -17,19 +17,18 @@ package com.diffplug.spotless;
 
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 /**
- * The requests to load a class for a feature is first delegated to the system class loader,
- * before the feature class loader searches the provided URLs. In case the class resolution or
- * verification fails, the request is delegated to the class loader of the build tool.
- * <br/>
- * Features shall be independent from build tools. Framework capabilities provided by
- * build tools can be explicitly accessed by omitting the run-time dependencies for these
- * classes in the provided URLs.
- * <br/>
- * For build tools not supporting framework capabilities required by certain features,
- * the Spotless plugin for the specific build tool provides the missing framework capabilities.
+ * This class loader is used to load classes of Spotless features from a search
+ * path of URLs.<br/>
+ * Features shall be independent from build tools. Hence the class loader of the
+ * underlying build tool is e.g. skipped during the the search for classes.<br/>
+ * Only {@link #BUILD_TOOLS_PACKAGES } are explicitly looked up from the class loader of
+ * the build tool and the provided URLs are ignored. This allows the feature to use
+ * distinct functionality of the build tool.
  */
 public class FeatureClassLoader extends URLClassLoader {
 	static {
@@ -40,12 +39,15 @@ public class FeatureClassLoader extends URLClassLoader {
 		}
 	}
 
+	/** Packages which must be provided by the build tool or the corresponding Spotless plugin. */
+	private static List<String> BUILD_TOOLS_PACKAGES = Arrays.asList("org.slf4j");
+
 	private final ClassLoader buildToolClassLoader;
 
 	/**
 	 * Constructs a new FeatureClassLoader for the given URLs, based on an {@code URLClassLoader},
-	 * using the system class loader as parent. In case the class resolution or verification fails,
-	 * the the class loader of the build tool is used.
+	 * using the system class loader as parent. For {@link #BUILD_TOOLS_PACKAGES }, the build
+	 * tool class loader is used.
 	 *
 	 * @param urls the URLs from which to load classes and resources
 	 * @param buildToolClassLoader The build tool class loader
@@ -61,11 +63,12 @@ public class FeatureClassLoader extends URLClassLoader {
 
 	@Override
 	protected Class<?> findClass(String name) throws ClassNotFoundException {
-		try {
-			return super.findClass(name);
-		} catch (ClassNotFoundException e) {
-			return buildToolClassLoader.loadClass(name);
+		for (String buildToolPackage : BUILD_TOOLS_PACKAGES) {
+			if (name.startsWith(buildToolPackage)) {
+				return buildToolClassLoader.loadClass(name);
+			}
 		}
+		return super.findClass(name);
 	}
 
 }

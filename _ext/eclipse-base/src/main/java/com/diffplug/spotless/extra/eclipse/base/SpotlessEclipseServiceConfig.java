@@ -123,9 +123,10 @@ public interface SpotlessEclipseServiceConfig {
 	 * provided in case this service is used.
 	 */
 	default public void useSlf4J(String loggerName, BiFunction<String, LogLevel, String> messageCustomizer) {
-		com.diffplug.spotless.extra.eclipse.base.service.SingleSlf4JService slf4jServce = new com.diffplug.spotless.extra.eclipse.base.service.SingleSlf4JService(loggerName, messageCustomizer);
+		SingleSlf4JService slf4jServce = new SingleSlf4JService(loggerName, messageCustomizer);
 		add(ExtendedLogService.class, slf4jServce);
 		add(ExtendedLogReaderService.class, slf4jServce);
+		slf4jServce.debug("Initialized Eclipse logging service.");
 	}
 
 	/** Applies the default configurations. */
